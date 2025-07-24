@@ -39,7 +39,7 @@ SAMPLE_RATE = 16000
 CHANNELS = 1
 RECORD_SECONDS = 5  # Default recording duration
 OLLAMA_BASE_URL = "http://localhost:11434/api"
-MODEL_NAME = "mistral:7b-instruct"  # Using available model
+MODEL_NAME = "deepseek-r1:8b"  # Using available model
 LANGUAGE = "ml-IN"  # Malayalam (India)
 
 class SimpleTranslator:
