@@ -31,6 +31,8 @@ from pathlib import Path
 from loguru import logger
 import sys
 from translate import Translator as TranslateTranslator
+import sounddevice as sd
+from loguru import logger
 
 # Configuration
 SAMPLE_RATE = 16000
@@ -189,78 +191,83 @@ def translate_to_malayalam(text):
     return translator.translate(text, src_lang="en", tgt_lang="ml")
 
 class VoiceAssistant:
-    def __init__(self, input_device=None):
-        """Initialize the voice assistant"""
+    def __init__(self):
+        """Initialize with auto mic selection and sample rate check."""
         self.recognizer = sr.Recognizer()
         self.translator = SimpleTranslator()
-        self.sample_rate = 16000
-        self.channels = 1
         self.recording = False
         self.audio_data = None
-        
-        # Set up audio device
-        try:
-            # Get list of all audio devices
-            devices = sd.query_devices()
-            
-            # Print available devices for debugging
-            print("\n=== Available Audio Devices ===")
-            for i, device in enumerate(devices):
-                print(f"{i}: {device['name']} (Input Channels: {device['max_input_channels']})")
-            print("==============================\n")
-            
-            # If no input device specified, try to find one with input channels
-            if input_device is None:
-                input_devices = [i for i, d in enumerate(devices) 
-                               if d['max_input_channels'] > 0]
-                
-                if not input_devices:
-                    raise RuntimeError("No input devices found!")
-                    
-                input_device = input_devices[0]
-            
-            self.input_device_id = input_device
-            logger.info(f"Using audio device: {devices[input_device]['name']}")
-            
-        except Exception as e:
-            logger.error(f"Error initializing audio: {e}")
-            print("\nError: Could not initialize audio. Using default settings.")
-            print("Audio recording may not work properly.\n")
-            self.input_device_id = sd.default.device[0] if hasattr(sd.default, 'device') else 0
+        self.channels = 1
 
-    def record_audio(self, duration=5, sample_rate=SAMPLE_RATE):
-        """Record audio from the default microphone
-        
-        Args:
-            duration (int): Duration of recording in seconds
-            sample_rate (int): Sample rate for the recording
-            
-        Returns:
-            tuple: (audio_data, sample_rate) if successful, (None, None) if failed
-        """
+        try:
+            # Use system default mic
+            sd.default.device = None
+            devices = sd.query_devices()
+            default_in = sd.default.device[0]
+            dev_info = devices[default_in]
+            logger.info(f"🎙️ System default mic: {dev_info['name']} (ID {default_in})")
+
+            # Fallback from virtual mixers if needed
+            if dev_info['max_input_channels'] > 2:
+                for idx, dev in enumerate(devices):
+                    if dev['max_input_channels'] > 0 and 'mic' in dev['name'].lower():
+                        sd.default.device = (idx, idx)
+                        default_in = idx
+                        dev_info = dev
+                        logger.warning(f"⚠️ Switched to real mic: {dev_info['name']} (ID {idx})")
+                        break
+
+            self.input_device_id = default_in
+
+            # 🔍 Validate supported sample rate
+            possible_rates = [16000, 32000, 44100, 48000]
+            for rate in possible_rates:
+                try:
+                    sd.check_input_settings(device=self.input_device_id, samplerate=rate)
+                    self.sample_rate = rate
+                    logger.info(f"✅ Sample rate confirmed: {rate} Hz")
+                    break
+                except Exception as e:
+                    continue
+            else:
+                raise RuntimeError("❌ No supported sample rate found!")
+
+        except Exception as e:
+            logger.error(f"Audio setup failed: {e}")
+            print("💥 Mic init failed. Check connections or permissions.")
+            raise
+
+    def record_audio(self, duration=5, sample_rate=None):
+        """Record audio from the microphone"""
+        if sample_rate is None:
+            sample_rate = self.sample_rate
+
         try:
             logger.info(f"Recording for {duration} seconds...")
             print("Speak now...")
-            
-            # Record audio
-            audio_data = sd.rec(
-                int(duration * sample_rate),
+
+            frames = []
+
+            with sd.InputStream(
                 samplerate=sample_rate,
-                channels=1,
+                channels=self.channels,
+                device=self.input_device_id,
                 dtype='float32',
-                device=self.input_device_id
-            )
-            sd.wait()  # Wait until recording is finished
-            
+                blocksize=0,
+                latency='low',
+                callback=lambda indata, frames_, time_, status_: frames.append(indata.copy())
+            ):
+                sd.sleep(int(duration * 1000))
+
+            audio_data = np.concatenate(frames, axis=0)
             logger.info("Recording finished")
-            
-            # Save the recording
+
             saved_file = self.save_audio(audio_data, sample_rate)
             if saved_file:
                 logger.info(f"Saved recording to {saved_file}")
-            
+
             return audio_data.flatten(), sample_rate
-            
+
         except Exception as e:
             logger.error(f"Error recording audio: {e}")
             print("Error recording audio. Make sure your microphone is properly connected and not being used by another application.\n")
