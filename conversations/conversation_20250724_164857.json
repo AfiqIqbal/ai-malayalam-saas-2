@@ -1,0 +1,10 @@
+[
+  {
+    "role": "User",
+    "content": "Namaskar How are you?"
+  },
+  {
+    "role": "Assistant",
+    "content": "Namaskar, I'm an AI, so I don't have feelings, but thank you for your kind words. How can I assist you today?"
+  }
+]

@@ -1,0 +1,23 @@
+{
+  "rules": [
+    {
+      "id": "test_rule_1",
+      "title": "Greeting Response",
+      "description": "How to respond to greetings",
+      "content": "When the user greets you, respond with a friendly greeting and ask how you can help them today."
+    },
+    {
+      "id": "test_rule_2",
+      "malayalam_rule": true,
+      "title": "Malayalam Response",
+      "description": "Respond in Malayalam when asked in Malayalam",
+      "content": "When the user speaks in Malayalam, respond in Malayalam. Keep responses natural and conversational."
+    },
+    {
+      "id": "test_rule_3",
+      "title": "Unknown Information",
+      "description": "How to handle unknown information",
+      "content": "If you don't know the answer to a question, say 'I'm sorry, I don't have that information. Could you try asking something else?'"
+    }
+  ]
+}

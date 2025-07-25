@@ -30,7 +30,6 @@ import wave
 import struct
 from pathlib import Path
 from loguru import logger
-import sys
 from translate import Translator as TranslateTranslator
 from functools import lru_cache
 from typing import Optional, Dict, Any
@@ -40,7 +39,7 @@ SAMPLE_RATE = 16000
 CHANNELS = 1
 RECORD_SECONDS = 5  # Default recording duration
 OLLAMA_BASE_URL = "http://localhost:11434/api"
-MODEL_NAME = "mistral:7b-instruct"  # Using available model
+MODEL_NAME = "mistral:7b-instruct-q4_0"  # Using quantized 4-bit model for better performance
 LANGUAGE = "ml-IN"  # Malayalam (India)
 
 class SimpleTranslator:
@@ -451,7 +450,8 @@ class VoiceAssistant:
 
 def main():
     """Main function to run the voice assistant"""
-    print("\n=== Malayalam Voice Assistant ===")
+    print("\n=== Malayalam Voice Assistant (Quantized Model) ===")
+    print("Using model:", MODEL_NAME)
     print("Press Enter to start recording (or 'q' to quit)\n")
     
     try:
@@ -504,7 +504,7 @@ def main():
                     print(f"\nAssistant: {response}")
                     assistant.speak(response)
                     
-                print("\n------------------------------")
+                print("\n" + "-"*30)
                     
             except KeyboardInterrupt:
                 print("\nExiting...")
